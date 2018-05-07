@@ -231,6 +231,24 @@ function area_order($arr,$keys,$type='asc') {
 }
 
 /*
+ * 二维数组去重
+ */
+function assoc_unique($arr, $key){
+    $tmp_arr = array();
+    foreach($arr as $k => $v){
+        //搜索$v[$key]是否在$tmp_arr数组中存在，若存在返回true
+        if(in_array($v[$key], $tmp_arr)){
+            unset($arr[$k]);
+        } else {
+            $tmp_arr[] = $v[$key];
+        }
+    }
+    sort($arr); //sort函数对数组进行排序
+    return $arr;
+}
+
+
+/*
  * 判断数组的维数
  */
 function getmaxdim($arr) {
@@ -263,3 +281,71 @@ function distance($lat1, $lng1, $lat2, $lng2, $miles = true) {
     $km = $r * $c;
     return ($miles ? ($km * 0.621371192) : $km);
 }
+
+/**
+ * 对象 转 数组
+ */
+function object_to_array($obj) {
+    $obj = (array)$obj;
+    foreach ($obj as $k => $v) {
+        if (gettype($v) == 'resource') {
+            return;
+        }
+        if (gettype($v) == 'object' || gettype($v) == 'array') {
+            $obj[$k] = (array)object_to_array($v);
+        }
+    }
+    return $obj;
+}
+
+//curl 发 post 请求
+function post($url, $post, array $option = array()) {
+    $opts = array ();
+    $opts [CURLOPT_URL] = $url;
+    $outtime = 5 ;
+    if( stripos( $url , 'edu.10086.cn' ) ) {
+        $outtime = 30 ;//政企接口总超时
+    }
+    $opts [CURLOPT_RETURNTRANSFER] = 1; //URL返回的内容作为curl_exec的返回值
+    $opts [CURLOPT_CONNECTTIMEOUT] = $outtime; //超?秒连不上则放弃
+    $opts [CURLOPT_TIMEOUT] = $outtime; //超?秒没有返回则放弃
+    if (! empty ( $post )) {
+        if (is_array ( $post )) {
+            $opts [CURLOPT_POSTFIELDS] = http_build_query ( $post, '', '&' );
+        } else {
+            $opts [CURLOPT_POSTFIELDS] = $post;
+        }
+        $opts [CURLOPT_POST] = 1;
+    }
+    if (parse_url ( $url, PHP_URL_SCHEME ) == 'https') {
+        $opts [CURLOPT_SSL_VERIFYHOST] = 2; // 2是推荐值, 详情见手册
+        $opts [CURLOPT_SSL_VERIFYPEER] = false;
+    }
+    if (! empty ( $option )) {
+        //$option,$opts的键名都是整数，不能用array_merge
+        foreach ( $option as $k => $v ) {
+            $opts [$k] = $v;
+        }
+    }
+
+    $ch = curl_init ();
+    curl_setopt_array ( $ch, $opts );
+    $res = curl_exec ( $ch );
+    /*
+    if (curl_errno ( $ch )) {
+        import ( 'ORG.Util.Logger' );
+        $log = array ('errno' => curl_errno ( $ch ), 'error' => curl_error ( $ch ), 'url' => $url, 'post' => $post );
+        $s = '';
+        foreach ( $log as $k => $v ) {
+            $s .= '$' . $k . '=' . var_export ( $v, true ) . ';';
+        }
+      Logger::add ( $s, 'curl_err' );
+        unset ( $s, $log );
+    }
+    */
+    curl_close ( $ch );
+    return $res;
+}
+
+
+
